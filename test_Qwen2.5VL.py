@@ -60,7 +60,7 @@ Consider any visual inconsistencies you notice and answer with only one word.
 Do not explain your reasoning.
 Do not output anything except the final classification.
 
-Answer:"""
+Answer with REAL or FAKE only."""
 
 PROMPT_STRUCTURED = """You are an expert in visual forensics specialized in detecting AI-generated and manipulated images under real-world conditions (including compression and re-digitization artifacts).
 Carefully analyze the image using the following criteria:

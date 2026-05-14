@@ -1,6 +1,6 @@
 ## Posizione del dataset
 
-Il dataset RRDataset è sul server nel seguente percorso:
+l dataset RRDataset si trova sul server in:
 
 
 /mnt/ssd1/teglia/rrdataset/RRDataset_final
@@ -23,6 +23,6 @@ podman run \
   --ipc host \
   localhost/alessandro240/internvl:latest \
   /opt/conda/bin/python3 /work/project/test_Qwen2.5VL.py \
-    --model_size 7B \
-    --prompt unstructured
+  --model_size <7B|32B|72B> \
+  --prompt <structured|unstructured>
 ```

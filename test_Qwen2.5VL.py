@@ -46,7 +46,7 @@ MODEL_MAP = {
 
 DATASET_ROOT      = Path("/work/dataset")
 CATEGORIES        = ["original", "redigital", "transfer"]
-SAMPLES_PER_CLASS = 5
+SAMPLES_PER_CLASS = 1000
 METRICS_FILE      = f"/work/project/metrics_qwen_{args.model_size}_{args.prompt}.json"
 RESULTS_FILE      = f"/work/project/results_qwen_{args.model_size}_{args.prompt}.csv"
 MODEL_PATH        = MODEL_MAP[args.model_size]

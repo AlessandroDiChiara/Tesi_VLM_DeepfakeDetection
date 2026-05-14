@@ -1,6 +1,6 @@
 ## Posizione del dataset
 
-l dataset RRDataset si trova sul server in:
+Il dataset RRDataset si trova sul server in:
 
 
 /mnt/ssd1/teglia/rrdataset/RRDataset_final

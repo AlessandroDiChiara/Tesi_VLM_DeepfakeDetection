@@ -6,7 +6,7 @@ Il dataset RRDataset è sul server nel seguente percorso:
 /mnt/ssd1/teglia/rrdataset/RRDataset_final
 
 
-I modelli sono salvati in:
+## I modelli sono salvati in:
 
 
 /mnt/ssd1/teglia/dichiara/models

@@ -12,7 +12,7 @@ import torchvision.transforms as T
 from pathlib import Path
 from PIL import Image
 from torchvision.transforms.functional import InterpolationMode
-from transformers import AutoModel, AutoTokenizer, AutoConfig
+from transformers import AutoModel, AutoTokenizer
 from tqdm import tqdm
 
 warnings.filterwarnings("ignore")
@@ -32,7 +32,7 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 
 GPU_CONFIG = {
     "8B":  "0",
-    "38B": "3,4,5",
+    "38B": "0,1,2",
 }
 os.environ["CUDA_VISIBLE_DEVICES"] = GPU_CONFIG[args.model_size]
 print(f"Usando GPU: {GPU_CONFIG[args.model_size]}")
@@ -56,7 +56,7 @@ print(f"Usando prompt: {args.prompt}")
 IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD  = (0.229, 0.224, 0.225)
 
-
+# ── Prompt ───────────────────────────────────────────────
 PROMPT_UNSTRUCTURED = """<image>\nLook at this image and determine whether it is a real photograph or an AI-generated image. The image may contain any subject: people, animals, objects, landscapes, or urban scenes.
 Consider any visual inconsistencies you notice and answer with only one word.
 
@@ -127,6 +127,7 @@ def find_closest_aspect_ratio(aspect_ratio, target_ratios, width, height, image_
 def dynamic_preprocess(image, min_num=1, max_num=12, image_size=448, use_thumbnail=False):
     orig_width, orig_height = image.size
     aspect_ratio = orig_width / orig_height
+    # calcola aspect ratio esistente e trova il più vicino tra quelli ottenibili con blocchi di dimensione image_size
     target_ratios = set(
         (i, j) for n in range(min_num, max_num + 1)
         for i in range(1, n + 1) for j in range(1, n + 1)
@@ -137,6 +138,7 @@ def dynamic_preprocess(image, min_num=1, max_num=12, image_size=448, use_thumbna
     target_width  = image_size * target_aspect_ratio[0]
     target_height = image_size * target_aspect_ratio[1]
     blocks = target_aspect_ratio[0] * target_aspect_ratio[1]
+    #resize l'immagine al nuovo aspect ratio   
     resized_img = image.resize((target_width, target_height))
     processed_images = []
     for i in range(blocks):
@@ -158,31 +160,6 @@ def load_image(image_path, input_size=448, max_num=9):
     pixel_values = [transform(img) for img in images]
     return torch.stack(pixel_values)
 
-#  Split modello su più GPU
-def split_model(model_name):
-    device_map = {}
-    world_size = torch.cuda.device_count()
-    config = AutoConfig.from_pretrained(model_name, trust_remote_code=True, cache_dir="/work/models")
-    num_layers = config.llm_config.num_hidden_layers
-    num_layers_per_gpu = math.ceil(num_layers / (world_size - 0.5))
-    num_layers_per_gpu = [num_layers_per_gpu] * world_size
-    num_layers_per_gpu[0] = math.ceil(num_layers_per_gpu[0] * 0.5)
-    layer_cnt = 0
-    for i, num_layer in enumerate(num_layers_per_gpu):
-        for j in range(num_layer):
-            device_map[f'language_model.model.layers.{layer_cnt}'] = i
-            layer_cnt += 1
-    device_map['vision_model'] = 0
-    device_map['mlp1'] = 0
-    device_map['language_model.model.tok_embeddings'] = 0
-    device_map['language_model.model.embed_tokens'] = 0
-    device_map['language_model.output'] = 0
-    device_map['language_model.model.norm'] = 0
-    device_map['language_model.model.rotary_emb'] = 0
-    device_map['language_model.lm_head'] = 0
-    device_map[f'language_model.model.layers.{num_layers - 1}'] = 0
-    return device_map
-
 # ── Carica campioni ──────────────────────────────────────
 def load_samples():
     random.seed(SEED)
@@ -203,7 +180,7 @@ def load_samples():
     print(f"Totale immagini: {len(samples)}")
     return samples
 
-# ── Inferenza 
+# ── Inferenza ────────────────────────────────────────────
 def run_inference(model, tokenizer, samples):
     generation_config = dict(max_new_tokens=5, do_sample=False)
     results = []
@@ -318,18 +295,13 @@ if __name__ == "__main__":
         print(f"  GPU {i}: {torch.cuda.get_device_name(i)} ({mem_total:.1f} GB)")
 
     print("\nCaricamento modello...")
-    if args.model_size == "38B":
-        device_map = split_model(MODEL_PATH)
-    else:
-        device_map = "auto"
-
     model = AutoModel.from_pretrained(
         MODEL_PATH,
         torch_dtype=torch.bfloat16,
         low_cpu_mem_usage=True,
         use_flash_attn=False,
         trust_remote_code=True,
-        device_map=device_map,
+        device_map="auto",
         cache_dir="/work/models"
     ).eval()
 
